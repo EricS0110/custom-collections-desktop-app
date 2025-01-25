@@ -1,0 +1,32 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+#-   repo: local
+#    hooks:
+#    - id: update-requirements-txt
+#      name: update-requirements-txt
+#      description: 'Generate requirements.txt based on poetry.lock'
+#      entry: poetry
+#      args: [export, --format, requirements.txt, --output, requirements.txt, --without-hashes]
+#      language: system
+#      pass_filenames: false
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.6.3
+  hooks:
+    # Run the linter.
+    - id: ruff
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
+-   repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+    -   id: isort
+        args: ["--profile", "black", "--filter-files"]
