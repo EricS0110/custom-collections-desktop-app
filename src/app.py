@@ -7,7 +7,7 @@ APP_TITLE = "Collection Manager"
 APP_GEOMETRY = "900x800"
 
 
-class WelcomeTextFrame(customtkinter.CTkFrame):
+class WelcomeFrame(customtkinter.CTkFrame):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
         self.heading_label = customtkinter.CTkLabel(
@@ -69,13 +69,6 @@ class DarkModeToggleFrame(customtkinter.CTkFrame):
             master, text="Dark Mode", command=switch_event, variable=self.switch_var, onvalue="on", offvalue="off"
         )
         self.dark_mode_toggle.pack(side="top", padx=10, pady=10)
-
-
-class WelcomeFrame(customtkinter.CTkFrame):
-    def __init__(self, master, settings, **kwargs):
-        super().__init__(master, **kwargs)
-        self.welcome_text_frame = WelcomeTextFrame(self, settings=settings)
-        self.welcome_text_frame.pack(anchor="w", expand=True, fill="both")
 
 
 class SettingsFrame(customtkinter.CTkFrame):
