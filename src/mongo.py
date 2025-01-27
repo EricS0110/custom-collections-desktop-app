@@ -45,3 +45,18 @@ class MongoConnection:
         :return: list of collection names
         """
         return self.db.list_collection_names()
+
+    def list_field_names(self, collection_name: str) -> list:
+        """
+        List the field names in a given collection by checking all documents in the collection
+        :param collection_name: string name of the collection
+        :return: list of field names
+        """
+        try:
+            field_names = set()
+            for doc in self.db[collection_name].find():
+                field_names.update(doc.keys())
+            field_names.remove("_id")
+            return list(field_names)
+        except KeyError:
+            pass

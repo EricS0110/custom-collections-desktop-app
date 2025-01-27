@@ -131,6 +131,87 @@ class NewCollectionFrame(customtkinter.CTkFrame):
         self.refresh_button.grid(row=4, column=0, columnspan=2, sticky="w", padx=10, pady=10)
 
 
+class CollectionsDropdownWithAllFrame(customtkinter.CTkFrame):
+    def __init__(self, master, settings, **kwargs):
+        super().__init__(master, **kwargs)
+        self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
+        self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.collection_dropdown = customtkinter.CTkComboBox(
+            self, values=["All"] + settings.mongo_connection.list_collection_names()
+        )
+        self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+
+class AddOneFrame(customtkinter.CTkFrame):
+    """
+    Frame for adding a single item to a collection. Populate the currently available fields for all documents in the selected collection.
+    Update the available fields when the collection is changed to reflect the new collection's fields.
+    """
+
+    def __init__(self, master, settings, **kwargs):
+        super().__init__(master, **kwargs)
+        self.settings = settings
+        self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
+        self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.collection_dropdown = customtkinter.CTkComboBox(
+            self, values=settings.mongo_connection.list_collection_names(), command=self.refresh_fields
+        )
+        self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+        self.fields_frame = customtkinter.CTkFrame(self)
+        self.fields_frame.grid(row=1, column=0, sticky="w", padx=10, pady=10, columnspan=2)
+
+        self.create_fields()
+
+        # Add a button to preview the item to the collection based on the fields and values entered by the user
+        self.preview_item_button = customtkinter.CTkButton(self, text="Add Item", command=self.preview_item)
+        self.preview_item_button.grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+
+        # Add a label in column 2 to display a preview of the item to be added
+        # based on the available fields and values entered by the user
+        self.preview_label = customtkinter.CTkLabel(self, text="Preview:")
+        self.preview_label.grid(row=3, column=0, sticky="w", padx=10, pady=10)
+        self.preview_text = customtkinter.CTkTextbox(self, width=40, height=10)
+        self.preview_text.grid(row=3, column=1, sticky="w", padx=10, pady=10)
+
+    def create_fields(self):
+        collection_name = self.collection_dropdown.get()
+        if not collection_name:
+            return
+        fields = self.settings.mongo_connection.list_field_names(collection_name)
+        for widget in self.fields_frame.winfo_children():
+            widget.destroy()
+        try:
+            for i, field in enumerate(fields):
+                label = customtkinter.CTkLabel(self.fields_frame, text=field)
+                label.grid(
+                    row=i,
+                    column=0,
+                    sticky="w",
+                    padx=10,
+                    pady=5,
+                )
+                entry = customtkinter.CTkEntry(self.fields_frame)
+                entry.grid(row=i, column=1, sticky="w", padx=10, pady=5)
+        except TypeError:
+            pass
+
+    def refresh_fields(self, event=None):
+        self.create_fields()
+
+    def preview_item(self):
+        """
+        Preview the item to be added to the collection based on the fields and values entered by the user
+        :return: None
+        """
+        item = {}
+        for widget in self.fields_frame.winfo_children():
+            if isinstance(widget, customtkinter.CTkEntry):
+                item[widget.cget("text")] = widget.get()
+        self.preview_text.configure(text=str(item))
+        return
+
+
 class MainTabView(customtkinter.CTkTabview):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
@@ -149,6 +230,8 @@ class MainTabView(customtkinter.CTkTabview):
         self.settings_frame.pack(anchor="w", expand=True, fill="both")
         self.settings_frame = NewCollectionFrame(master=self.tab("    New Collection    "), settings=settings)
         self.settings_frame.pack(anchor="w", expand=True, fill="both")
+        self.add_one_frame = AddOneFrame(master=self.tab("    Add One    "), settings=settings)
+        self.add_one_frame.pack(anchor="w", expand=True, fill="both")
 
 
 class App(customtkinter.CTk):

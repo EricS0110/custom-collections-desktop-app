@@ -25,6 +25,17 @@ class Settings(BaseSettings):
             f".{self.mongo_uri}.mongodb.net"
         )
 
+    @property
+    def mongo_fields_by_collection(self) -> dict:
+        """
+        Get a dictionary of fields for each available collection within mongo_connection
+        :return:
+        """
+        fields = {}
+        for collection in self.mongo_connection.list_collection_names():
+            fields[collection] = self.mongo_connection.list_field_names(collection)
+        return fields
+
 
 # noinspection PyArgumentList
 def load_settings() -> Settings:
