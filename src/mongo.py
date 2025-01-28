@@ -1,3 +1,4 @@
+import pandas as pd
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
@@ -60,3 +61,33 @@ class MongoConnection:
             return list(field_names)
         except KeyError:
             pass
+
+    def add_item(self, collection_name: str, item: dict) -> None:
+        """
+        Add an item to a collection
+        :param collection_name: string name of the collection
+        :param item: dictionary of the item to be added
+        :return: None
+        """
+        self.db[collection_name].insert_one(item)
+        return
+
+    def add_bulk_data(self, data: dict[str, pd.DataFrame]):
+        """
+        Add bulk data to the MongoDB database
+        :param data: dictionary of DataFrames to be added
+        :return: None
+        """
+        for collection_name, df in data.items():
+            if not df.empty:
+                # Check if the collection exists
+                if collection_name not in self.db.list_collection_names():
+                    # Create the collection if it does not exist
+                    self.db.create_collection(collection_name)
+
+                # Convert DataFrame to list of dictionaries
+                data = df.to_dict(orient="records")
+
+                # Insert data into the collection
+                self.db[collection_name].insert_many(data)
+        return

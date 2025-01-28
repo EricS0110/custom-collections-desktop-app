@@ -1,10 +1,22 @@
+import datetime
+import logging
+import shutil
+import tkinter as tk
+from pathlib import Path
+from tkinter import filedialog, messagebox
+
 import customtkinter
+import pandas as pd
 from customtkinter import CTkFont
 
+from src.logging_config import setup_logging
 from src.security import load_settings
 
 APP_TITLE = "Collection Manager"
 APP_GEOMETRY = "900x800"
+
+# Initialize logging
+setup_logging()
 
 
 class WelcomeFrame(customtkinter.CTkFrame):
@@ -89,9 +101,6 @@ class NewCollectionFrame(customtkinter.CTkFrame):
             try:
                 settings.mongo_connection.add_collection(collection_name)
             except Exception as e:
-                import tkinter as tk
-                from tkinter import messagebox
-
                 root = tk.Tk()
                 root.withdraw()
                 messagebox.showerror(title="Error", message=f"Error creating collection: {e}\n\nIt may already exist.")
@@ -99,6 +108,7 @@ class NewCollectionFrame(customtkinter.CTkFrame):
             self.collection_name_entry.delete(0, "end")
             self.collections = settings.mongo_connection.list_collection_names()
             self.collection_list.configure(text=", ".join(self.collections))
+            logging.info(f"NEW COLLECTION CREATED: {collection_name}")
             return
 
         self.heading_label = customtkinter.CTkLabel(
@@ -151,6 +161,7 @@ class AddOneFrame(customtkinter.CTkFrame):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
         self.settings = settings
+        self.item_to_add = {}
         self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
         self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
         self.collection_dropdown = customtkinter.CTkComboBox(
@@ -164,15 +175,19 @@ class AddOneFrame(customtkinter.CTkFrame):
         self.create_fields()
 
         # Add a button to preview the item to the collection based on the fields and values entered by the user
-        self.preview_item_button = customtkinter.CTkButton(self, text="Add Item", command=self.preview_item)
+        self.preview_item_button = customtkinter.CTkButton(self, text="Check Item", command=self.preview_item)
         self.preview_item_button.grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=10)
 
         # Add a label in column 2 to display a preview of the item to be added
         # based on the available fields and values entered by the user
         self.preview_label = customtkinter.CTkLabel(self, text="Preview:")
         self.preview_label.grid(row=3, column=0, sticky="w", padx=10, pady=10)
-        self.preview_text = customtkinter.CTkTextbox(self, width=40, height=10)
+        self.preview_text = customtkinter.CTkTextbox(self, width=200, height=100)
         self.preview_text.grid(row=3, column=1, sticky="w", padx=10, pady=10)
+
+        # Add a button to add the item to the collection
+        self.add_item_button = customtkinter.CTkButton(self, text="Add Item", command=self.add_item)
+        self.add_item_button.grid(row=4, column=0, columnspan=2, sticky="w", padx=10, pady=10)
 
     def create_fields(self):
         collection_name = self.collection_dropdown.get()
@@ -193,6 +208,7 @@ class AddOneFrame(customtkinter.CTkFrame):
                 )
                 entry = customtkinter.CTkEntry(self.fields_frame)
                 entry.grid(row=i, column=1, sticky="w", padx=10, pady=5)
+                entry.configure(placeholder_text=field)
         except TypeError:
             pass
 
@@ -205,10 +221,122 @@ class AddOneFrame(customtkinter.CTkFrame):
         :return: None
         """
         item = {}
+        self.item_to_add = {}
         for widget in self.fields_frame.winfo_children():
             if isinstance(widget, customtkinter.CTkEntry):
-                item[widget.cget("text")] = widget.get()
-        self.preview_text.configure(text=str(item))
+                item[widget.cget("placeholder_text")] = widget.get()
+        self.preview_text.delete("1.0", "end")
+        # Insert a cleanly-formatted constructed string with a field and value pair on each line
+        for field, value in item.items():
+            if value == "":
+                pass
+            else:
+                self.preview_text.insert("end", f"{field}: {value}\n")
+                self.item_to_add[field] = value
+        return
+
+    def add_item(self):
+        """
+        Add the item to the collection
+        :return: None
+        """
+        # Todo: Long-term, add a toggle to allow the user to specify the input as a text box that
+        #  can be parsed as a series of key: value pairs separated by newlines
+        collection_name = self.collection_dropdown.get()
+        if not collection_name:
+            return
+        try:
+            self.settings.mongo_connection.add_item(collection_name, self.item_to_add)
+        except Exception as e:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message=f"Error adding item: {e}")
+            root.destroy()
+        self.preview_text.delete("1.0", "end")
+        self.create_fields()
+        logging.info(f"ITEM ADDED TO COLLECTION: {collection_name}")
+        logging.info(f"ITEM: {self.item_to_add}")
+        return
+
+
+class AddBulkFrame(customtkinter.CTkFrame):
+    def __init__(self, master, settings, **kwargs):
+        super().__init__(master, **kwargs)
+        self.settings = settings
+        self.file_path = None
+        self.file_data = None
+
+        # Add a button that will open a file dialog to select the Excel file to upload
+        self.upload_button = customtkinter.CTkButton(self, text="Select Excel File", command=self.select_file)
+        self.upload_button.pack(side="top", padx=10, pady=10)
+        self.file_path_label = customtkinter.CTkLabel(self, text="No file selected")
+        self.file_path_label.pack(side="top", padx=10, pady=10)
+
+        # Add a label to display the count of rows in each of the read-in DataFrames
+        self.row_count_label = customtkinter.CTkLabel(self, text="Rows in each sheet:")
+        self.row_count_label.pack(side="top", padx=10, pady=10)
+
+        # Add a button to upload the data from the Excel file to the database
+        self.upload_data_button = customtkinter.CTkButton(self, text="Upload Data", command=self.upload_data)
+        self.upload_data_button.pack(side="top", padx=10, pady=10)
+
+    def select_file(self):
+        """
+        Open a file dialog to select an Excel file to upload
+        :return: None
+        """
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            file_path = filedialog.askopenfilename(
+                title="Select an Excel file to upload",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                initialdir=Path(__file__).parent,
+            )
+            root.destroy()
+        except Exception as e:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message=f"Error selecting file: {e}")
+            root.destroy()
+            return
+        if file_path:
+            self.file_path = file_path
+            self.file_path_label.configure(text=file_path)
+            # Open the Excel file and read each sheet into a dictionary of DataFrames using Pandas
+            try:
+                self.file_data = pd.read_excel(self.file_path, sheet_name=None)
+            except Exception as e:
+                root = tk.Tk()
+                root.withdraw()
+                messagebox.showerror(title="Error", message=f"Error reading file: {e}")
+                root.destroy()
+                return
+            # Display the number of rows in each sheet in the Excel file
+            row_counts = {}
+            for sheet_name, df in self.file_data.items():
+                row_counts[sheet_name] = len(df)
+            self.row_count_label.configure(text="\n".join([f"{k}: {v}" for k, v in row_counts.items()]))
+
+    def upload_data(self):
+        self.settings.mongo_connection.add_bulk_data(self.file_data)
+
+        # Copy the file to a local archive location with a timestamp in the filename
+        archive_path = Path(__file__).parent / "archive"
+        archive_path.mkdir(exist_ok=True)
+        try:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            archive_file = archive_path / f"{Path(self.file_path).stem}_{timestamp}.xlsx"
+            archive_file = archive_file.resolve()
+            shutil.copy(self.file_path, archive_file)
+        except Exception as e:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message=f"Error archiving file: {e}")
+            root.destroy()
+            return
+        logging.info(f"FILE UPLOADED: {self.file_path}")
+        logging.info(f"FILE ARCHIVED: {archive_file}")
         return
 
 
@@ -232,6 +360,8 @@ class MainTabView(customtkinter.CTkTabview):
         self.settings_frame.pack(anchor="w", expand=True, fill="both")
         self.add_one_frame = AddOneFrame(master=self.tab("    Add One    "), settings=settings)
         self.add_one_frame.pack(anchor="w", expand=True, fill="both")
+        self.add_bulk_frame = AddBulkFrame(master=self.tab("    Add Bulk    "), settings=settings)
+        self.add_bulk_frame.pack(anchor="w", expand=True, fill="both")
 
 
 class App(customtkinter.CTk):
@@ -245,6 +375,9 @@ class App(customtkinter.CTk):
 
 
 if __name__ == "__main__":
+    setup_logging()
+    logging.info("Application starting")
     main_settings = load_settings()
     app = App(settings=main_settings)
     app.mainloop()
+    logging.info("Exiting application")
