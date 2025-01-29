@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     mongo_database: str
     mongo_uri: str
 
+    archive_directory: Optional[str] = None
+    download_directory: Optional[str] = None
+
     @computed_field
     @property
     def mongo_connection_string(self) -> str:

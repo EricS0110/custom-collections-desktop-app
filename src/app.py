@@ -141,17 +141,6 @@ class NewCollectionFrame(customtkinter.CTkFrame):
         self.refresh_button.grid(row=4, column=0, columnspan=2, sticky="w", padx=10, pady=10)
 
 
-class CollectionsDropdownWithAllFrame(customtkinter.CTkFrame):
-    def __init__(self, master, settings, **kwargs):
-        super().__init__(master, **kwargs)
-        self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
-        self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
-        self.collection_dropdown = customtkinter.CTkComboBox(
-            self, values=["All"] + settings.mongo_connection.list_collection_names()
-        )
-        self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
-
-
 class AddOneFrame(customtkinter.CTkFrame):
     """
     Frame for adding a single item to a collection. Populate the currently available fields for all documents in the selected collection.
@@ -340,6 +329,65 @@ class AddBulkFrame(customtkinter.CTkFrame):
         return
 
 
+class DownloadFrame(customtkinter.CTkFrame):
+    def __init__(self, master, settings, **kwargs):
+        super().__init__(master, **kwargs)
+        self.settings = settings
+        self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
+        self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.collection_dropdown = customtkinter.CTkComboBox(
+            self, values=["All"] + settings.mongo_connection.list_collection_names()
+        )
+        self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+        self.download_button = customtkinter.CTkButton(self, text="Download", command=self.download)
+        self.download_button.grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+
+    def download(self):
+        collection_name = self.collection_dropdown.get()
+        df_dict = {}
+        if collection_name == "All":
+            collection_names = self.settings.mongo_connection.list_collection_names()
+        else:
+            collection_names = [collection_name]
+        for collection_name in collection_names:
+            try:
+                df_dict[collection_name] = self.settings.mongo_connection.get_collection_as_df(collection_name)
+            except Exception as e:
+                root = tk.Tk()
+                root.withdraw()
+                messagebox.showerror(title="Error", message=f"Error downloading collection: {e}")
+                root.destroy()
+                return
+        try:
+            file_path = filedialog.asksaveasfilename(
+                title="Save As",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                initialdir=Path(__file__).parent,
+                initialfile=f"{collection_name}.xlsx",
+            )
+        except Exception as e:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message=f"Error selecting file: {e}")
+            root.destroy()
+            return
+        if file_path:
+            try:
+                with pd.ExcelWriter(f"{file_path}.xlsx", engine="xlsxwriter") as writer:
+                    for collection_name, df in df_dict.items():
+                        df.to_excel(writer, sheet_name=collection_name, index=False)
+            except Exception as e:
+                root = tk.Tk()
+                root.withdraw()
+                messagebox.showerror(title="Error", message=f"Error saving file: {e}")
+                root.destroy()
+                return
+            logging.info(f"COLLECTION DOWNLOADED: {collection_names}")
+            logging.info(f"FILE SAVED: {file_path}")
+        return
+
+
 class MainTabView(customtkinter.CTkTabview):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
@@ -362,6 +410,8 @@ class MainTabView(customtkinter.CTkTabview):
         self.add_one_frame.pack(anchor="w", expand=True, fill="both")
         self.add_bulk_frame = AddBulkFrame(master=self.tab("    Add Bulk    "), settings=settings)
         self.add_bulk_frame.pack(anchor="w", expand=True, fill="both")
+        self.download_frame = DownloadFrame(master=self.tab("    Download    "), settings=settings)
+        self.download_frame.pack(anchor="w", expand=True, fill="both")
 
 
 class App(customtkinter.CTk):

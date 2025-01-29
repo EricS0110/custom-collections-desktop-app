@@ -91,3 +91,11 @@ class MongoConnection:
                 # Insert data into the collection
                 self.db[collection_name].insert_many(data)
         return
+
+    def get_collection_as_df(self, collection_name) -> pd.DataFrame:
+        """
+        Get a collection as a DataFrame
+        :param collection_name: string name of the collection
+        :return: DataFrame of the collection
+        """
+        return pd.DataFrame(self.db[collection_name].find())
