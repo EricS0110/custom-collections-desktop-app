@@ -1,6 +1,8 @@
 import pandas as pd
+from bson import ObjectId
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
+from pymongo.results import DeleteResult
 
 
 class MongoConnection:
@@ -132,6 +134,22 @@ class MongoConnection:
         :param value: string value to search for
         :return: DataFrame of the search results
         """
-        item_query = {f"{field}": {"$regex": value, "$options": "i"}}
-        search_results = [document for document in self.db[collection_name].find(item_query)]
+        if field == "_id":
+            try:
+                search_results = self.db[collection_name].find({"_id": ObjectId(value)})
+            except Exception:
+                return []  # Return an empty list if the ObjectId conversion fails
+        else:
+            item_query = {f"{field}": {"$regex": value, "$options": "i"}}
+            search_results = [document for document in self.db[collection_name].find(item_query)]
         return list(search_results)
+
+    def delete_item(self, collection_name: str, item_id: str) -> DeleteResult:
+        """
+        Delete an item from a collection
+        :param collection_name: string name of the collection
+        :param item_id: string ID of the item to be deleted
+        :return: None
+        """
+        result = self.db[collection_name].delete_one({"_id": ObjectId(item_id)})
+        return result

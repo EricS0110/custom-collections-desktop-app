@@ -459,7 +459,6 @@ class SearchFrame(customtkinter.CTkScrollableFrame):
         self.search_results_label = customtkinter.CTkLabel(self, text="Search Results:")
         self.search_results_label.grid(row=3, column=0, sticky="w", padx=10, pady=10)
         self.search_results_text = customtkinter.CTkTextbox(self, width=500, height=500, font=("Arial", 16))
-        self.search_results_text.insert("1.0", f"{self.settings.fields_cache}")
         self.search_results_text.grid(row=3, column=1, sticky="w", padx=10, pady=10)
 
     def create_fields(self):
@@ -519,6 +518,81 @@ class SearchFrame(customtkinter.CTkScrollableFrame):
         return
 
 
+class DeleteFrame(customtkinter.CTkFrame):
+    # Delete an item from a selected collection based on the _id field for the item
+    def __init__(self, master, settings, **kwargs):
+        super().__init__(master, **kwargs)
+        self.settings = settings
+        self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
+        self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.collection_dropdown = customtkinter.CTkComboBox(
+            self, values=settings.mongo_connection.list_collection_names()
+        )
+        self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+        self.delete_search_label = customtkinter.CTkLabel(self, text="Item _id:")
+        self.delete_search_label.grid(row=1, column=0, sticky="w", padx=10, pady=10)
+        self.delete_search_entry = customtkinter.CTkEntry(
+            self, width=300, font=("Arial", 16), placeholder_text="Item _id"
+        )
+        self.delete_search_entry.grid(row=1, column=1, sticky="w", padx=10, pady=10)
+
+        self.check_button = customtkinter.CTkButton(self, text="Check Item", command=self.check)
+        self.check_button.grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+
+        self.check_result = customtkinter.CTkTextbox(self, width=500, height=350, font=("Arial", 16))
+        self.check_result.grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+
+        self.delete_button = customtkinter.CTkButton(self, text="Delete Item", command=self.delete, state="disabled")
+        self.delete_button.grid(row=4, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+
+    def check(self):
+        # Get the collection name and item _id from the user
+        collection_name = self.collection_dropdown.get()
+        item_id = self.delete_search_entry.get()
+        # Search the given collection for the given _id value
+        try:
+            search_results = self.settings.mongo_connection.search(collection_name, "_id", item_id)
+        except Exception as e:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message=f"Error searching collection: {e}")
+            root.destroy()
+            return
+        # Display the search results in the text box
+        self.check_result.delete("1.0", "end")
+        for search_result in search_results:
+            self.check_result.insert("end", "{\n")
+            for key, value in search_result.items():
+                self.check_result.insert("end", f"\t{key}: {value}\n")
+            self.check_result.insert("end", "}\n")
+        # Enable the delete button
+        if search_results:
+            self.delete_button.configure(state="normal")
+        return
+
+    def delete(self):
+        collection_name = self.collection_dropdown.get()
+        item_id = self.delete_search_entry.get()
+        if not collection_name:
+            return
+        try:
+            delete_result = self.settings.mongo_connection.delete_item(collection_name, item_id)
+            if delete_result.deleted_count == 1:
+                logging.info(f"ITEM DELETED FROM COLLECTION: {collection_name}")
+                logging.info(f"ITEM ID: {item_id}")
+            if delete_result.deleted_count == 0:
+                logging.info(f"ITEM NOT FOUND IN COLLECTION: {collection_name}")
+                logging.info(f"ITEM ID: {item_id}")
+            self.check_result.delete("1.0", "end")
+        except Exception as e:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message=f"Error deleting item: {e}")
+            root.destroy()
+        return
+
+
 class MainTabView(customtkinter.CTkTabview):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
@@ -545,6 +619,8 @@ class MainTabView(customtkinter.CTkTabview):
         self.download_frame.pack(anchor="w", expand=True, fill="both")
         self.search_frame = SearchFrame(master=self.tab("    Search    "), settings=settings)
         self.search_frame.pack(anchor="w", expand=True, fill="both")
+        self.delete_frame = DeleteFrame(master=self.tab("    Delete    "), settings=settings)
+        self.delete_frame.pack(anchor="w", expand=True, fill="both")
 
 
 class App(customtkinter.CTk):
