@@ -1,6 +1,7 @@
+import json
 import os
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 from pydantic import SecretStr, computed_field
@@ -16,6 +17,8 @@ class Settings(BaseSettings):
     mongo_cluster: str
     mongo_database: str
     mongo_uri: str
+
+    fields_cache: Optional[dict] = None
 
     archive_directory: Optional[str] = None
     download_directory: Optional[str] = None
@@ -38,6 +41,23 @@ class Settings(BaseSettings):
         for collection in self.mongo_connection.list_collection_names():
             fields[collection] = self.mongo_connection.list_field_names(collection)
         return fields
+
+    def update_setting(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def save_field_cache(self) -> None:
+        """
+        Save the fields cache to a .json file
+        :return:
+        """
+        if self.fields_cache is not None:
+            import json
+
+            with open("fields_cache.json", "w") as f:
+                json.dump(self.fields_cache, f)
+        else:
+            pass
+        return
 
 
 # noinspection PyArgumentList
@@ -75,7 +95,6 @@ def load_settings() -> Settings:
     # Attempt to connect to the MongoDB instance specified in the connection string
     try:
         return_settings.mongo_connection = MongoConnection(Settings().model_dump())
-
     except Exception:
         import tkinter as tk
         from tkinter import messagebox
@@ -91,6 +110,13 @@ def load_settings() -> Settings:
         )
         root.destroy()
         sys.exit()
+
+    # Try to load the fields_cache.json file into the fields_cache attribute
+    try:
+        with open("fields_cache.json", "r") as f:
+            return_settings.fields_cache = json.load(f)
+    except FileNotFoundError:
+        return_settings.fields_cache = None
 
     return return_settings
 

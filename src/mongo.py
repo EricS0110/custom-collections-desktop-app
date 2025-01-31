@@ -47,7 +47,7 @@ class MongoConnection:
         """
         return self.db.list_collection_names()
 
-    def list_field_names(self, collection_name: str) -> list:
+    def list_field_names(self, collection_name: str) -> list | None:
         """
         List the field names in a given collection by checking all documents in the collection
         :param collection_name: string name of the collection
@@ -58,6 +58,20 @@ class MongoConnection:
             for doc in self.db[collection_name].find():
                 field_names.update(doc.keys())
             field_names.remove("_id")
+            return list(field_names)
+        except KeyError:
+            pass
+
+    def list_field_names_with_id(self, collection_name: str) -> list | None:
+        """
+        List the field names in a given collection by checking all documents in the collection
+        :param collection_name: string name of the collection
+        :return: list of field names
+        """
+        try:
+            field_names = set()
+            for doc in self.db[collection_name].find():
+                field_names.update(doc.keys())
             return list(field_names)
         except KeyError:
             pass
@@ -99,3 +113,25 @@ class MongoConnection:
         :return: DataFrame of the collection
         """
         return pd.DataFrame(self.db[collection_name].find())
+
+    def generate_fields_by_collection(self) -> dict:
+        """
+        Generate a dictionary of fields for each available collection within the database
+        :return: dictionary of fields by collection
+        """
+        fields = {}
+        for collection in self.db.list_collection_names():
+            fields[collection] = self.list_field_names_with_id(collection)
+        return fields
+
+    def search(self, collection_name: str, field: str, value: str) -> list:
+        """
+        Search a collection for a specific value as a regex cast to lower case
+        :param collection_name: string name of the collection
+        :param field: string name of the field to search
+        :param value: string value to search for
+        :return: DataFrame of the search results
+        """
+        item_query = {f"{field}": {"$regex": value, "$options": "i"}}
+        search_results = [document for document in self.db[collection_name].find(item_query)]
+        return list(search_results)

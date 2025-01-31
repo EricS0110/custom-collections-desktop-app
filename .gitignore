@@ -162,3 +162,4 @@ cython_debug/
 #.idea/
 /src/settings.conf
 /BulkUpload.xlsx
+/src/fields_cache.json

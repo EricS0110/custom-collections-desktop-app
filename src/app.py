@@ -83,11 +83,48 @@ class DarkModeToggleFrame(customtkinter.CTkFrame):
         self.dark_mode_toggle.pack(side="top", padx=10, pady=10)
 
 
+class FieldCacheFrame(customtkinter.CTkFrame):
+    def __init__(self, master, settings, **kwargs):
+        super().__init__(master, **kwargs)
+        self.settings = settings
+        self.cache_label = customtkinter.CTkLabel(self, text="Field Cache")
+        self.cache_label.pack(side="top", padx=10, pady=10)
+        self.cache_button = customtkinter.CTkButton(self, text="Save Cache", command=self.save_cache)
+        self.cache_button.pack(side="top", padx=10, pady=10)
+        self.cache_button = customtkinter.CTkButton(self, text="Load Cache", command=self.load_cache)
+        self.cache_button.pack(side="top", padx=10, pady=10)
+
+    def save_cache(self):
+        field_cache_value = self.settings.mongo_connection.generate_fields_by_collection()
+        self.settings.update_setting("fields_cache", field_cache_value)
+        self.settings.save_field_cache()
+        logging.info("Field cache saved to fields_cache.json")
+
+    def load_cache(self):
+        # Try to load from a fields_cache.json file, raise error if file does not exist
+        try:
+            import json
+
+            with open("fields_cache.json", "r") as f:
+                field_cache_value = json.load(f)
+        except FileNotFoundError:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message="No fields_cache.json file found")
+            root.destroy()
+            return
+        self.settings.update_setting("fields_cache", field_cache_value)
+
+
 class SettingsFrame(customtkinter.CTkFrame):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
         self.dark_mode_toggle_frame = DarkModeToggleFrame(self)
         self.dark_mode_toggle_frame.pack(side="top", anchor="w", expand=True, fill="both")
+
+        # Add a frame to include a button to save a local cache of the fields in each collection (saves querying time)
+        self.field_cache_frame = FieldCacheFrame(self, settings=settings)
+        self.field_cache_frame.pack(side="top", anchor="w", expand=True, fill="both")
 
 
 class NewCollectionFrame(customtkinter.CTkFrame):
@@ -182,11 +219,16 @@ class AddOneFrame(customtkinter.CTkFrame):
         collection_name = self.collection_dropdown.get()
         if not collection_name:
             return
-        fields = self.settings.mongo_connection.list_field_names(collection_name)
+        if self.settings.fields_cache:
+            fields = self.settings.fields_cache[collection_name]
+        else:
+            fields = self.settings.mongo_connection.list_field_names(collection_name)
         for widget in self.fields_frame.winfo_children():
             widget.destroy()
         try:
             for i, field in enumerate(fields):
+                if field == "_id":
+                    continue
                 label = customtkinter.CTkLabel(self.fields_frame, text=field)
                 label.grid(
                     row=i,
@@ -388,6 +430,95 @@ class DownloadFrame(customtkinter.CTkFrame):
         return
 
 
+class SearchFrame(customtkinter.CTkScrollableFrame):
+    def __init__(self, master, settings, **kwargs):
+        super().__init__(master, **kwargs)
+        self.settings = settings
+        self.search_criteria = {}
+        self.search_results = []
+        self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
+        self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.collection_dropdown = customtkinter.CTkComboBox(
+            self, values=settings.mongo_connection.list_collection_names(), command=self.refresh_fields
+        )
+        self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+        self.fields_frame = customtkinter.CTkFrame(self)
+        self.fields_frame.grid(row=1, column=0, sticky="w", padx=10, pady=10, columnspan=2)
+
+        self.create_fields()
+
+        self.search_criteria_label = customtkinter.CTkLabel(self, text="Search Criteria:")
+        self.search_criteria_label.grid(row=2, column=0, sticky="w", padx=10, pady=10)
+        self.search_criteria_text = customtkinter.CTkTextbox(self, width=200, height=20, font=("Arial", 16))
+        self.search_criteria_text.grid(row=2, column=1, sticky="w", padx=100, pady=10)
+
+        self.search_button = customtkinter.CTkButton(self, text="Search", command=self.search)
+        self.search_button.grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+
+        self.search_results_label = customtkinter.CTkLabel(self, text="Search Results:")
+        self.search_results_label.grid(row=3, column=0, sticky="w", padx=10, pady=10)
+        self.search_results_text = customtkinter.CTkTextbox(self, width=500, height=500, font=("Arial", 16))
+        self.search_results_text.insert("1.0", f"{self.settings.fields_cache}")
+        self.search_results_text.grid(row=3, column=1, sticky="w", padx=10, pady=10)
+
+    def create_fields(self):
+        collection_name = self.collection_dropdown.get()
+        if not collection_name:
+            return
+        if self.settings.fields_cache:
+            fields = self.settings.fields_cache[collection_name]
+        else:
+            fields = self.settings.mongo_connection.list_field_names_with_id(collection_name)
+        for widget in self.fields_frame.winfo_children():
+            widget.destroy()
+        try:
+            label = customtkinter.CTkLabel(self.fields_frame, text="Search field:")
+            label.grid(
+                row=0,
+                column=0,
+                sticky="w",
+                padx=10,
+                pady=5,
+            )
+            search_dropdown = customtkinter.CTkComboBox(self.fields_frame, values=fields)
+            search_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=5)
+        except TypeError:
+            pass
+
+    def refresh_fields(self, event=None):
+        self.create_fields()
+
+    def search(self):
+        """
+        Search the collection for items that match the search criteria
+        :return: None
+        """
+        collection_name = self.collection_dropdown.get()
+        field = self.fields_frame.winfo_children()[1].get()
+        if not collection_name:
+            return
+        search_value = self.search_criteria_text.get("1.0", "end").strip()
+        try:
+            search_results = self.settings.mongo_connection.search(
+                collection_name=collection_name, field=field, value=search_value
+            )
+            self.search_results_text.delete("1.0", "end")
+            # Insert a pretty-print json version of the search results into the text box
+            for search_result in search_results:
+                self.search_results_text.insert("end", "{\n")
+                for key, value in search_result.items():
+                    self.search_results_text.insert("end", f"\t{key}: {value}\n")
+                self.search_results_text.insert("end", "}\n")
+        except Exception as e:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(title="Error", message=f"Error searching collection: {e}")
+            root.destroy()
+            return
+        return
+
+
 class MainTabView(customtkinter.CTkTabview):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
@@ -412,6 +543,8 @@ class MainTabView(customtkinter.CTkTabview):
         self.add_bulk_frame.pack(anchor="w", expand=True, fill="both")
         self.download_frame = DownloadFrame(master=self.tab("    Download    "), settings=settings)
         self.download_frame.pack(anchor="w", expand=True, fill="both")
+        self.search_frame = SearchFrame(master=self.tab("    Search    "), settings=settings)
+        self.search_frame.pack(anchor="w", expand=True, fill="both")
 
 
 class App(customtkinter.CTk):
