@@ -13,7 +13,7 @@ from src.logging_config import setup_logging
 from src.security import load_settings
 
 APP_TITLE = "Collection Manager"
-APP_GEOMETRY = "900x800"
+APP_GEOMETRY = "900x900"
 
 # Initialize logging
 setup_logging()
@@ -208,7 +208,7 @@ class AddOneFrame(customtkinter.CTkFrame):
         # based on the available fields and values entered by the user
         self.preview_label = customtkinter.CTkLabel(self, text="Preview:")
         self.preview_label.grid(row=3, column=0, sticky="w", padx=10, pady=10)
-        self.preview_text = customtkinter.CTkTextbox(self, width=200, height=100)
+        self.preview_text = customtkinter.CTkTextbox(self, width=400, height=200)
         self.preview_text.grid(row=3, column=1, sticky="w", padx=10, pady=10)
 
         # Add a button to add the item to the collection
@@ -271,8 +271,6 @@ class AddOneFrame(customtkinter.CTkFrame):
         Add the item to the collection
         :return: None
         """
-        # Todo: Long-term, add a toggle to allow the user to specify the input as a text box that
-        #  can be parsed as a series of key: value pairs separated by newlines
         collection_name = self.collection_dropdown.get()
         if not collection_name:
             return
@@ -298,6 +296,8 @@ class AddBulkFrame(customtkinter.CTkFrame):
         self.file_data = None
 
         # Add a button that will open a file dialog to select the Excel file to upload
+        self.spacing_label = customtkinter.CTkLabel(self, text="")
+        self.spacing_label.pack(side="top", padx=10, pady=50)
         self.upload_button = customtkinter.CTkButton(self, text="Select Excel File", command=self.select_file)
         self.upload_button.pack(side="top", padx=10, pady=10)
         self.file_path_label = customtkinter.CTkLabel(self, text="No file selected")
@@ -375,15 +375,17 @@ class DownloadFrame(customtkinter.CTkFrame):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
         self.settings = settings
+        self.spacing_label = customtkinter.CTkLabel(self, text="")
+        self.spacing_label.grid(row=0, column=0, padx=10, pady=50)
         self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
-        self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.collection_label.grid(row=1, column=0, sticky="w", padx=10, pady=10)
         self.collection_dropdown = customtkinter.CTkComboBox(
             self, values=["All"] + settings.mongo_connection.list_collection_names()
         )
-        self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+        self.collection_dropdown.grid(row=1, column=1, sticky="w", padx=10, pady=10)
 
         self.download_button = customtkinter.CTkButton(self, text="Download", command=self.download)
-        self.download_button.grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+        self.download_button.grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=10)
 
     def download(self):
         collection_name = self.collection_dropdown.get()
