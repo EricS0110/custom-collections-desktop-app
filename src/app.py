@@ -110,8 +110,14 @@ class NewCollectionFrame(customtkinter.CTkFrame):
         self.settings = settings
 
         def create_collection():
-            collection_name = self.collection_name_entry.get()
+            collection_name = self.collection_name_entry.get().lower().strip()
             if collection_name == "":
+                return
+            # Check that collection_name only contains alphanumeric characters, and allow underscores and hyphens
+            if not collection_name.replace("_", "").replace("-", "").isalnum():
+                notify_user_error(
+                    "Collection name must only contain alphanumeric characters, underscores, and hyphens."
+                )
                 return
             try:
                 settings.mongo_connection.add_collection(collection_name)
@@ -127,20 +133,24 @@ class NewCollectionFrame(customtkinter.CTkFrame):
             self, text="Create a new collection", font=CTkFont(family="Arial", size=24, weight="bold", underline=True)
         )
         self.heading_label.grid(row=0, column=0, sticky="n", padx=10, pady=10)
+        self.notice_label = customtkinter.CTkLabel(
+            self, text="*  Collection names will be cast to lower-case  *", font=("Arial", 16)
+        )
+        self.notice_label.grid(row=1, column=0, sticky="n", padx=10, pady=10)
         self.collection_name_label = customtkinter.CTkLabel(self, text="Collection Name:")
-        self.collection_name_label.grid(row=1, column=0, sticky="w", padx=10, pady=10)
+        self.collection_name_label.grid(row=2, column=0, sticky="w", padx=10, pady=10)
         self.collection_name_entry = customtkinter.CTkEntry(self)
-        self.collection_name_entry.grid(row=1, column=1, sticky="w", padx=10, pady=10)
+        self.collection_name_entry.grid(row=2, column=1, sticky="w", padx=10, pady=10)
         self.create_collection_button = customtkinter.CTkButton(
             self, text="Create Collection", command=create_collection
         )
-        self.create_collection_button.grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+        self.create_collection_button.grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=10)
 
         # Add a list of the current collections for the user and a button to refresh the list
         self.collection_list_label = customtkinter.CTkLabel(self, text="Current Collections:")
-        self.collection_list_label.grid(row=3, column=0, sticky="w", padx=10, pady=10)
+        self.collection_list_label.grid(row=4, column=0, sticky="w", padx=10, pady=10)
         self.collection_list = customtkinter.CTkLabel(self)
-        self.collection_list.grid(row=3, column=1, sticky="w", padx=10, pady=10)
+        self.collection_list.grid(row=4, column=1, sticky="w", padx=10, pady=10)
         self.collections = settings.mongo_connection.list_collection_names()
         self.collection_list.configure(text=", ".join(self.collections))
 
@@ -150,7 +160,7 @@ class NewCollectionFrame(customtkinter.CTkFrame):
             return
 
         self.refresh_button = customtkinter.CTkButton(self, text="Refresh List", command=refresh_list)
-        self.refresh_button.grid(row=4, column=0, columnspan=2, sticky="w", padx=10, pady=10)
+        self.refresh_button.grid(row=5, column=0, columnspan=2, sticky="w", padx=10, pady=10)
 
 
 class AddOneFrame(customtkinter.CTkFrame):
@@ -378,6 +388,7 @@ class DownloadFrame(customtkinter.CTkFrame):
                 return
             logging.info(f"COLLECTION DOWNLOADED: {collection_names}")
             logging.info(f"FILE SAVED: {file_path}")
+            notify_user_info(message="Download complete!")
         return
 
 
@@ -387,29 +398,38 @@ class SearchFrame(customtkinter.CTkScrollableFrame):
         self.settings = settings
         self.search_criteria = {}
         self.search_results = []
-        self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
+
+        self.collection_frame = customtkinter.CTkFrame(self)
+        self.collection_frame.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.collection_label = customtkinter.CTkLabel(self.collection_frame, text="Collection:")
         self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
         self.collection_dropdown = customtkinter.CTkComboBox(
-            self, values=settings.collections_cache, command=self.refresh_fields
+            self.collection_frame, values=settings.collections_cache, command=self.refresh_fields
         )
         self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
 
         self.fields_frame = customtkinter.CTkFrame(self)
-        self.fields_frame.grid(row=1, column=0, sticky="w", padx=10, pady=10, columnspan=2)
-
+        self.fields_frame.grid(row=1, column=0, sticky="w", padx=10, pady=10)
         self.create_fields()
 
-        self.search_criteria_label = customtkinter.CTkLabel(self, text="Search Criteria:")
-        self.search_criteria_label.grid(row=2, column=0, sticky="w", padx=10, pady=10)
-        self.search_criteria_text = customtkinter.CTkTextbox(self, width=200, height=20, font=("Arial", 16))
-        self.search_criteria_text.grid(row=2, column=1, sticky="w", padx=100, pady=10)
+        self.search_criteria_frame = customtkinter.CTkFrame(self)
+        self.search_criteria_frame.grid(row=2, column=0, sticky="w", padx=10, pady=10)
+        self.search_criteria_label = customtkinter.CTkLabel(self.search_criteria_frame, text="Search Criteria:")
+        self.search_criteria_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.search_criteria_text = customtkinter.CTkTextbox(
+            self.search_criteria_frame, width=200, height=20, font=("Arial", 16)
+        )
+        self.search_criteria_text.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+        self.search_button = customtkinter.CTkButton(self.search_criteria_frame, text="Search", command=self.search)
+        self.search_button.grid(row=0, column=2, sticky="w", padx=10, pady=10)
 
-        self.search_button = customtkinter.CTkButton(self, text="Search", command=self.search)
-        self.search_button.grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=10)
-
-        self.search_results_label = customtkinter.CTkLabel(self, text="Search Results:")
+        self.search_results_frame = customtkinter.CTkFrame(self)
+        self.search_results_frame.grid(row=3, column=0, sticky="w", padx=10, pady=10)
+        self.search_results_label = customtkinter.CTkLabel(self.search_results_frame, text="Search Results:")
         self.search_results_label.grid(row=3, column=0, sticky="w", padx=10, pady=10)
-        self.search_results_text = customtkinter.CTkTextbox(self, width=500, height=500, font=("Arial", 16))
+        self.search_results_text = customtkinter.CTkTextbox(
+            self.search_results_frame, width=500, height=500, font=("Arial", 16)
+        )
         self.search_results_text.grid(row=3, column=1, sticky="w", padx=10, pady=10)
 
     def create_fields(self):
