@@ -97,50 +97,20 @@ class DarkModeToggleFrame(customtkinter.CTkFrame):
         self.dark_mode_toggle.pack(side="top", padx=10, pady=10)
 
 
-class FieldCacheFrame(customtkinter.CTkFrame):
-    def __init__(self, master, settings, **kwargs):
-        super().__init__(master, **kwargs)
-        self.settings = settings
-        self.cache_label = customtkinter.CTkLabel(self, text="Field Cache")
-        self.cache_label.pack(side="top", padx=10, pady=10)
-        self.cache_button = customtkinter.CTkButton(self, text="Save Cache", command=self.save_cache)
-        self.cache_button.pack(side="top", padx=10, pady=10)
-        self.cache_button = customtkinter.CTkButton(self, text="Load Cache", command=self.load_cache)
-        self.cache_button.pack(side="top", padx=10, pady=10)
-
-    def save_cache(self):
-        field_cache_value = self.settings.mongo_connection.generate_fields_by_collection()
-        self.settings.update_setting("fields_cache", field_cache_value)
-        self.settings.save_field_cache()
-        logging.info("Field cache saved to fields_cache.json")
-
-    def load_cache(self):
-        # Try to load from a fields_cache.json file, raise error if file does not exist
-        try:
-            import json
-
-            with open("fields_cache.json", "r") as f:
-                field_cache_value = json.load(f)
-        except FileNotFoundError:
-            notify_user_error("No fields_cache.json file found")
-            return
-        self.settings.update_setting("fields_cache", field_cache_value)
-
-
 class SettingsFrame(customtkinter.CTkFrame):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
+        self.settings = settings
+        self.spacing_label = customtkinter.CTkLabel(self, text="")
+        self.spacing_label.pack(side="top", padx=10, pady=50)
         self.dark_mode_toggle_frame = DarkModeToggleFrame(self)
         self.dark_mode_toggle_frame.pack(side="top", anchor="w", expand=True, fill="both")
-
-        # Add a frame to include a button to save a local cache of the fields in each collection (saves querying time)
-        self.field_cache_frame = FieldCacheFrame(self, settings=settings)
-        self.field_cache_frame.pack(side="top", anchor="w", expand=True, fill="both")
 
 
 class NewCollectionFrame(customtkinter.CTkFrame):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
+        self.settings = settings
 
         def create_collection():
             collection_name = self.collection_name_entry.get()
@@ -148,12 +118,12 @@ class NewCollectionFrame(customtkinter.CTkFrame):
                 return
             try:
                 settings.mongo_connection.add_collection(collection_name)
+                logging.info(f"NEW COLLECTION CREATED: {collection_name}")
             except Exception as e:
                 notify_user_error(f"Error creating collection: {e}\n\nIt may already exist.")
             self.collection_name_entry.delete(0, "end")
-            self.collections = settings.mongo_connection.list_collection_names()
+            self.collections = settings.collections_cache
             self.collection_list.configure(text=", ".join(self.collections))
-            logging.info(f"NEW COLLECTION CREATED: {collection_name}")
             return
 
         self.heading_label = customtkinter.CTkLabel(
@@ -178,8 +148,8 @@ class NewCollectionFrame(customtkinter.CTkFrame):
         self.collection_list.configure(text=", ".join(self.collections))
 
         def refresh_list():
-            self.collections = settings.mongo_connection.list_collection_names()
-            self.collection_list.configure(text=", ".join(self.collections))
+            self.settings.collections_cache = self.settings.mongo_connection.list_collection_names()
+            self.collection_list.configure(text=", ".join(self.settings.collections_cache))
             return
 
         self.refresh_button = customtkinter.CTkButton(self, text="Refresh List", command=refresh_list)
@@ -199,7 +169,7 @@ class AddOneFrame(customtkinter.CTkFrame):
         self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
         self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
         self.collection_dropdown = customtkinter.CTkComboBox(
-            self, values=settings.mongo_connection.list_collection_names(), command=self.refresh_fields
+            self, values=settings.collections_cache, command=self.refresh_fields
         )
         self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
 
@@ -227,10 +197,7 @@ class AddOneFrame(customtkinter.CTkFrame):
         collection_name = self.collection_dropdown.get()
         if not collection_name:
             return
-        if self.settings.fields_cache:
-            fields = self.settings.fields_cache[collection_name]
-        else:
-            fields = self.settings.mongo_connection.list_field_names(collection_name)
+        fields = self.settings.fields_cache[collection_name]
         for widget in self.fields_frame.winfo_children():
             widget.destroy()
         try:
@@ -375,9 +342,7 @@ class DownloadFrame(customtkinter.CTkFrame):
         self.spacing_label.grid(row=0, column=0, padx=10, pady=50)
         self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
         self.collection_label.grid(row=1, column=0, sticky="w", padx=10, pady=10)
-        self.collection_dropdown = customtkinter.CTkComboBox(
-            self, values=["All"] + settings.mongo_connection.list_collection_names()
-        )
+        self.collection_dropdown = customtkinter.CTkComboBox(self, values=["All"] + settings.collections_cache)
         self.collection_dropdown.grid(row=1, column=1, sticky="w", padx=10, pady=10)
 
         self.download_button = customtkinter.CTkButton(self, text="Download", command=self.download)
@@ -387,7 +352,7 @@ class DownloadFrame(customtkinter.CTkFrame):
         collection_name = self.collection_dropdown.get()
         df_dict = {}
         if collection_name == "All":
-            collection_names = self.settings.mongo_connection.list_collection_names()
+            collection_names = self.settings.collections_cache
         else:
             collection_names = [collection_name]
         for collection_name in collection_names:
@@ -428,7 +393,7 @@ class SearchFrame(customtkinter.CTkScrollableFrame):
         self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
         self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
         self.collection_dropdown = customtkinter.CTkComboBox(
-            self, values=settings.mongo_connection.list_collection_names(), command=self.refresh_fields
+            self, values=settings.collections_cache, command=self.refresh_fields
         )
         self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
 
@@ -454,10 +419,7 @@ class SearchFrame(customtkinter.CTkScrollableFrame):
         collection_name = self.collection_dropdown.get()
         if not collection_name:
             return
-        if self.settings.fields_cache:
-            fields = self.settings.fields_cache[collection_name]
-        else:
-            fields = self.settings.mongo_connection.list_field_names_with_id(collection_name)
+        fields = self.settings.fields_cache[collection_name]
         for widget in self.fields_frame.winfo_children():
             widget.destroy()
         try:
@@ -511,9 +473,7 @@ class DeleteFrame(customtkinter.CTkFrame):
         self.settings = settings
         self.collection_label = customtkinter.CTkLabel(self, text="Collection:")
         self.collection_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
-        self.collection_dropdown = customtkinter.CTkComboBox(
-            self, values=settings.mongo_connection.list_collection_names()
-        )
+        self.collection_dropdown = customtkinter.CTkComboBox(self, values=settings.collections_cache)
         self.collection_dropdown.grid(row=0, column=1, sticky="w", padx=10, pady=10)
 
         self.delete_search_label = customtkinter.CTkLabel(self, text="Item _id:")

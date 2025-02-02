@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 from typing import Any, Optional
@@ -18,6 +17,7 @@ class Settings(BaseSettings):
     mongo_database: str
     mongo_uri: str
 
+    collections_cache: Optional[list] = None
     fields_cache: Optional[dict] = None
 
     archive_directory: Optional[str] = None
@@ -44,20 +44,6 @@ class Settings(BaseSettings):
 
     def update_setting(self, key: str, value: Any) -> None:
         setattr(self, key, value)
-
-    def save_field_cache(self) -> None:
-        """
-        Save the fields cache to a .json file
-        :return:
-        """
-        if self.fields_cache is not None:
-            import json
-
-            with open("fields_cache.json", "w") as f:
-                json.dump(self.fields_cache, f)
-        else:
-            pass
-        return
 
 
 # noinspection PyArgumentList
@@ -111,12 +97,9 @@ def load_settings() -> Settings:
         root.destroy()
         sys.exit()
 
-    # Try to load the fields_cache.json file into the fields_cache attribute
-    try:
-        with open("fields_cache.json", "r") as f:
-            return_settings.fields_cache = json.load(f)
-    except FileNotFoundError:
-        return_settings.fields_cache = None
+    # Update the settings with the collection and fields info
+    return_settings.collections_cache = return_settings.mongo_connection.list_collection_names()
+    return_settings.fields_cache = return_settings.mongo_fields_by_collection
 
     return return_settings
 
