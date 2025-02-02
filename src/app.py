@@ -19,6 +19,20 @@ APP_GEOMETRY = "900x900"
 setup_logging()
 
 
+def notify_user_error(message):
+    root = tk.Tk()
+    root.withdraw()
+    messagebox.showerror(title="Error", message=message)
+    root.destroy()
+
+
+def notify_user_info(message):
+    root = tk.Tk()
+    root.withdraw()
+    messagebox.showinfo(title="Info", message=message)
+    root.destroy()
+
+
 class WelcomeFrame(customtkinter.CTkFrame):
     def __init__(self, master, settings, **kwargs):
         super().__init__(master, **kwargs)
@@ -108,10 +122,7 @@ class FieldCacheFrame(customtkinter.CTkFrame):
             with open("fields_cache.json", "r") as f:
                 field_cache_value = json.load(f)
         except FileNotFoundError:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message="No fields_cache.json file found")
-            root.destroy()
+            notify_user_error("No fields_cache.json file found")
             return
         self.settings.update_setting("fields_cache", field_cache_value)
 
@@ -138,10 +149,7 @@ class NewCollectionFrame(customtkinter.CTkFrame):
             try:
                 settings.mongo_connection.add_collection(collection_name)
             except Exception as e:
-                root = tk.Tk()
-                root.withdraw()
-                messagebox.showerror(title="Error", message=f"Error creating collection: {e}\n\nIt may already exist.")
-                root.destroy()
+                notify_user_error(f"Error creating collection: {e}\n\nIt may already exist.")
             self.collection_name_entry.delete(0, "end")
             self.collections = settings.mongo_connection.list_collection_names()
             self.collection_list.configure(text=", ".join(self.collections))
@@ -277,10 +285,7 @@ class AddOneFrame(customtkinter.CTkFrame):
         try:
             self.settings.mongo_connection.add_item(collection_name, self.item_to_add)
         except Exception as e:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message=f"Error adding item: {e}")
-            root.destroy()
+            notify_user_error(f"Error adding item: {e}")
         self.preview_text.delete("1.0", "end")
         self.create_fields()
         logging.info(f"ITEM ADDED TO COLLECTION: {collection_name}")
@@ -326,10 +331,7 @@ class AddBulkFrame(customtkinter.CTkFrame):
             )
             root.destroy()
         except Exception as e:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message=f"Error selecting file: {e}")
-            root.destroy()
+            notify_user_error(f"Error selecting file: {e}")
             return
         if file_path:
             self.file_path = file_path
@@ -338,10 +340,7 @@ class AddBulkFrame(customtkinter.CTkFrame):
             try:
                 self.file_data = pd.read_excel(self.file_path, sheet_name=None)
             except Exception as e:
-                root = tk.Tk()
-                root.withdraw()
-                messagebox.showerror(title="Error", message=f"Error reading file: {e}")
-                root.destroy()
+                notify_user_error(f"Error reading file: {e}")
                 return
             # Display the number of rows in each sheet in the Excel file
             row_counts = {}
@@ -361,10 +360,7 @@ class AddBulkFrame(customtkinter.CTkFrame):
             archive_file = archive_file.resolve()
             shutil.copy(self.file_path, archive_file)
         except Exception as e:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message=f"Error archiving file: {e}")
-            root.destroy()
+            notify_user_error(f"Error archiving file: {e}")
             return
         logging.info(f"FILE UPLOADED: {self.file_path}")
         logging.info(f"FILE ARCHIVED: {archive_file}")
@@ -398,10 +394,7 @@ class DownloadFrame(customtkinter.CTkFrame):
             try:
                 df_dict[collection_name] = self.settings.mongo_connection.get_collection_as_df(collection_name)
             except Exception as e:
-                root = tk.Tk()
-                root.withdraw()
-                messagebox.showerror(title="Error", message=f"Error downloading collection: {e}")
-                root.destroy()
+                notify_user_error(f"Error downloading collection: {e}")
                 return
         try:
             file_path = filedialog.asksaveasfilename(
@@ -411,10 +404,7 @@ class DownloadFrame(customtkinter.CTkFrame):
                 initialfile=f"{collection_name}.xlsx",
             )
         except Exception as e:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message=f"Error selecting file: {e}")
-            root.destroy()
+            notify_user_error(f"Error selecting file: {e}")
             return
         if file_path:
             try:
@@ -422,10 +412,7 @@ class DownloadFrame(customtkinter.CTkFrame):
                     for collection_name, df in df_dict.items():
                         df.to_excel(writer, sheet_name=collection_name, index=False)
             except Exception as e:
-                root = tk.Tk()
-                root.withdraw()
-                messagebox.showerror(title="Error", message=f"Error saving file: {e}")
-                root.destroy()
+                notify_user_error(f"Error saving file: {e}")
                 return
             logging.info(f"COLLECTION DOWNLOADED: {collection_names}")
             logging.info(f"FILE SAVED: {file_path}")
@@ -512,10 +499,7 @@ class SearchFrame(customtkinter.CTkScrollableFrame):
                     self.search_results_text.insert("end", f"\t{key}: {value}\n")
                 self.search_results_text.insert("end", "}\n")
         except Exception as e:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message=f"Error searching collection: {e}")
-            root.destroy()
+            notify_user_error(f"Error searching collection: {e}")
             return
         return
 
@@ -556,10 +540,7 @@ class DeleteFrame(customtkinter.CTkFrame):
         try:
             search_results = self.settings.mongo_connection.search(collection_name, "_id", item_id)
         except Exception as e:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message=f"Error searching collection: {e}")
-            root.destroy()
+            notify_user_error(f"Error searching collection: {e}")
             return
         # Display the search results in the text box
         self.check_result.delete("1.0", "end")
@@ -588,10 +569,7 @@ class DeleteFrame(customtkinter.CTkFrame):
                 logging.info(f"ITEM ID: {item_id}")
             self.check_result.delete("1.0", "end")
         except Exception as e:
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(title="Error", message=f"Error deleting item: {e}")
-            root.destroy()
+            notify_user_error(f"Error deleting item: {e}")
         return
 
 
