@@ -15,9 +15,6 @@ from src.security import load_settings
 APP_TITLE = "Collection Manager"
 APP_GEOMETRY = "900x900"
 
-# Initialize logging
-setup_logging()
-
 
 def notify_user_error(message):
     root = tk.Tk()
@@ -575,8 +572,8 @@ class App(customtkinter.CTk):
 
 if __name__ == "__main__":
     setup_logging()
-    logging.info("Application starting")
     main_settings = load_settings()
+    logging.info("Settings established, application starting")
     app = App(settings=main_settings)
     app.mainloop()
     logging.info("Exiting application")

@@ -1,5 +1,7 @@
 import os
 import sys
+import tkinter as tk
+from tkinter import messagebox
 from typing import Any, Optional
 
 from dotenv import load_dotenv
@@ -46,7 +48,6 @@ class Settings(BaseSettings):
         setattr(self, key, value)
 
 
-# noinspection PyArgumentList
 def load_settings() -> Settings:
     # Load the settings from the environment
     # Determines the current directory based on execution method (.py or .exe)
@@ -59,9 +60,6 @@ def load_settings() -> Settings:
 
     # Check if the settings.conf file exists.  If it does not, notify the user in a pop-up window.
     if not os.path.exists(settings_file):
-        import tkinter as tk
-        from tkinter import messagebox
-
         root = tk.Tk()
         root.withdraw()
         messagebox.showerror(
@@ -80,11 +78,8 @@ def load_settings() -> Settings:
 
     # Attempt to connect to the MongoDB instance specified in the connection string
     try:
-        return_settings.mongo_connection = MongoConnection(Settings().model_dump())
+        return_settings.mongo_connection = MongoConnection(return_settings.model_dump())
     except Exception:
-        import tkinter as tk
-        from tkinter import messagebox
-
         root = tk.Tk()
         root.withdraw()
         messagebox.showerror(
