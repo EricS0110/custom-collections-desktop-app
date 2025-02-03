@@ -9,8 +9,8 @@ import customtkinter
 import pandas as pd
 from customtkinter import CTkFont
 
-from logging_config import setup_logging
-from security import load_settings
+from support.logging_config import setup_logging
+from support.security import load_settings
 
 APP_TITLE = "Collection Manager"
 APP_GEOMETRY = "900x900"
