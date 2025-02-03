@@ -30,10 +30,12 @@ jobs:
       - name: Install Poetry
         shell: pwsh
         run: |
-          # Download and install Poetry
           (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-          # On Windows, add Poetry’s bin directory to the PATH
-          [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";C:\Users\runneradmin\AppData\Roaming\Python\Scripts", "User")
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
+      
+      - name: Verify Poetry Installation
+        shell: pwsh
+        run: |
           poetry --version
 
       # Step 4: Install Project Dependencies using Poetry
