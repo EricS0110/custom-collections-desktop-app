@@ -1,4 +1,4 @@
-name: Build and Package Release
+name: Package Release
 
 on:
   push:
@@ -12,64 +12,64 @@ permissions:
   id-token: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      # Step 1: Checkout the repository
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      # Step 2: Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      # Step 2.5: Set up tkinter
-      - name: Install Tkinter dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-tk
-
-      # Step 3: Install Poetry
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          # Add Poetry's bin directory to the PATH for subsequent steps
-          echo "${HOME}/.local/bin" >> $GITHUB_PATH
-          poetry --version
-
-      # Step 4: Install Project Dependencies using Poetry
-      - name: Install Dependencies
-        run: |
-          poetry lock
-          poetry install
-
-      # Step 5: Build the executable using PyInstaller via Poetry
-      - name: Build Executable
-        run: |
-          # This runs PyInstaller within the Poetry-managed environment.
-          poetry run pyinstaller src/app.spec
-
-      # Step 6: Package the .exe and additional file into a ZIP archive
-      - name: Create Release ZIP
-        run: |
-          mkdir release
-          # Adjust the path if your .exe is located elsewhere.
-          cp dist/collections_app/collections_app release/
-          # Copy an additional file from the repository (e.g., README.md).
-          cp src/settings.EXAMPLE.conf release/
-          cp ExampleBulkUpload.xlsx release/
-          # Create a ZIP archive containing the contents of the release folder.
-          cd release && zip -r ../release.zip . && cd ..
-
-      # Step 7: Upload the ZIP file as an artifact
-      - name: Upload Release Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-zip
-          path: release.zip
+#  build:
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      # Step 1: Checkout the repository
+#      - name: Checkout Repository
+#        uses: actions/checkout@v4
+#
+#      # Step 2: Set up Python
+#      - name: Set up Python
+#        uses: actions/setup-python@v5
+#        with:
+#          python-version: '3.x'
+#
+#      # Step 2.5: Set up tkinter
+#      - name: Install Tkinter dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y python3-tk
+#
+#      # Step 3: Install Poetry
+#      - name: Install Poetry
+#        run: |
+#          curl -sSL https://install.python-poetry.org | python3 -
+#          # Add Poetry's bin directory to the PATH for subsequent steps
+#          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+#          poetry --version
+#
+#      # Step 4: Install Project Dependencies using Poetry
+#      - name: Install Dependencies
+#        run: |
+#          poetry lock
+#          poetry install
+#
+#      # Step 5: Build the executable using PyInstaller via Poetry
+#      - name: Build Executable
+#        run: |
+#          # This runs PyInstaller within the Poetry-managed environment.
+#          poetry run pyinstaller src/app.spec
+#
+#      # Step 6: Package the .exe and additional file into a ZIP archive
+#      - name: Create Release ZIP
+#        run: |
+#          mkdir release
+#          # Adjust the path if your .exe is located elsewhere.
+#          cp dist/collections_app/collections_app release/
+#          # Copy an additional file from the repository (e.g., README.md).
+#          cp src/settings.EXAMPLE.conf release/
+#          cp ExampleBulkUpload.xlsx release/
+#          # Create a ZIP archive containing the contents of the release folder.
+#          cd release && zip -r ../release.zip . && cd ..
+#
+#      # Step 7: Upload the ZIP file as an artifact
+#      - name: Upload Release Artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: release-zip
+#          path: release.zip
 
   release:
     needs: build
