@@ -44,9 +44,8 @@ jobs:
       - name: Build Executable
         run: |
           # This runs PyInstaller within the Poetry-managed environment.
-          pwd
-          ls
-          poetry run pyinstaller ./src/app.spec
+          cd src
+          poetry run pyinstaller app.spec
 
       # Step 6: Package the .exe and additional file into a ZIP archive
       - name: Create Release ZIP
