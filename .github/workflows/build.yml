@@ -39,6 +39,7 @@ jobs:
         run: |
           poetry lock
           poetry install
+          poetry install tkinter
 
       # Step 5: Build the executable using PyInstaller via Poetry
       - name: Build Executable
