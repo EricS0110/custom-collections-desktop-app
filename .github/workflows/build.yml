@@ -108,8 +108,8 @@ jobs:
           # Save the new version for later steps.
           echo "new_version=$newVersion" >> $GITHUB_OUTPUT
 
-      # Create a GitHub Release with the new version.
-      - name: Create GitHub Release
+      # Create a draft GitHub Release with the new version.
+      - name: Create Draft GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
@@ -117,16 +117,7 @@ jobs:
           name: Release ${{ steps.new_version.outputs.new_version }}
           body: Automated release based on build workflow.
           draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Upload the ZIP artifact to the GitHub Release.
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.new_version.outputs.new_version }}
-          asset_path: ./release.zip
-          asset_name: release.zip
-          asset_content_type: application/zip
+          files:
+            release.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
