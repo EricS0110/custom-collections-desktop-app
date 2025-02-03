@@ -76,13 +76,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Download the built ZIP artifact from the build job.
-      - name: Download Release Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: release-zip
-          path: .
-
       # Checkout the repository so we can fetch the tags.
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -117,7 +110,5 @@ jobs:
           name: Release ${{ steps.new_version.outputs.new_version }}
           body: Automated release based on build workflow.
           draft: true
-          files:
-            release.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
