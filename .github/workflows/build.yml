@@ -116,6 +116,7 @@ jobs:
           tag_name: ${{ steps.new_version.outputs.new_version }}
           name: Release ${{ steps.new_version.outputs.new_version }}
           body: Automated release based on build workflow.
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
