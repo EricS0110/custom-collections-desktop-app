@@ -5,10 +5,9 @@ from tkinter import messagebox
 from typing import Any, Optional
 
 from dotenv import load_dotenv
+from mongo import MongoConnection
 from pydantic import SecretStr, computed_field
 from pydantic_settings import BaseSettings
-
-from mongo import MongoConnection
 
 
 class Settings(BaseSettings):
