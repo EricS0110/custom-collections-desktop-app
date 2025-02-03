@@ -26,6 +26,12 @@ jobs:
         with:
           python-version: '3.x'
 
+      # Step 2.5: Set up tkinter
+      - name: Install Tkinter dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
       # Step 3: Install Poetry
       - name: Install Poetry
         run: |
@@ -39,7 +45,6 @@ jobs:
         run: |
           poetry lock
           poetry install
-          poetry install tkinter
 
       # Step 5: Build the executable using PyInstaller via Poetry
       - name: Build Executable
