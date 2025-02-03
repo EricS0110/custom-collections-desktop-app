@@ -33,7 +33,7 @@ jobs:
           # Download and install Poetry
           (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
           # On Windows, add Poetry’s bin directory to the PATH
-          echo 'if (-not (Get-Command poetry -ErrorAction Ignore)) { $env:Path += ";C:\Users\runneradmin\AppData\Roaming\Python\Scripts" }' | Out-File -Append $PROFILE
+          [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";C:\Users\runneradmin\AppData\Roaming\Python\Scripts", "User")
           poetry --version
 
       # Step 4: Install Project Dependencies using Poetry
