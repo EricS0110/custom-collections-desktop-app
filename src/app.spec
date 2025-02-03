@@ -11,9 +11,9 @@ CURRENT_DIR = Path(os.path.abspath(os.path.dirname(__name__))) / "src"
 # Add data files using the relative file path to the spec file
 data_files = [
     # (source, destination in the bundle)
-    (str(CURRENT_DIR / "logging_config.py"), "."),
-    (str(CURRENT_DIR / "mongo.py"), "."),
-    (str(CURRENT_DIR / "security.py"), "."),
+    ("logging_config.py"), "."),
+    ("mongo.py"), "."),
+    ("security.py"), "."),
     (str(Path(customtkinter.__file__).parent), "customtkinter/"),
 ]
 
