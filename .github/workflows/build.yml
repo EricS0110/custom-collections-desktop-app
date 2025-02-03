@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       # Step 1: Checkout the repository
@@ -26,16 +26,12 @@ jobs:
         with:
           python-version: '3.x'
 
-      # Step 2.5: Set up tkinter
-      - name: Install Tkinter dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-tk
+      # Step 2.5: Set up tkinter (Windows includes Tkinter by default with Python installation)
 
       # Step 3: Install Poetry
       - name: Install Poetry
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+          (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
           # Add Poetry's bin directory to the PATH for subsequent steps
           echo "${HOME}/.local/bin" >> $GITHUB_PATH
           poetry --version
@@ -57,14 +53,14 @@ jobs:
         run: |
           mkdir release
           pwd && ls
-          cd dist/collections_app/collections_app && ls
+          cd dist/collections_app && ls
           # Adjust the path if your .exe is located elsewhere.
           cp dist/collections_app/collections_app/collections_app.exe release/
           # Copy an additional file from the repository (e.g., README.md).
           cp src/settings.EXAMPLE.conf release/
           cp ExampleBulkUpload.xlsx release/
           # Create a ZIP archive containing the contents of the release folder.
-          cd release && zip -r ../release.zip . && cd ..
+          cd release && tar -a -c -f ../release.zip . && cd ..
 
       # Step 7: Upload the ZIP file as an artifact
       - name: Upload Release Artifact
