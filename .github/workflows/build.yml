@@ -56,8 +56,8 @@ jobs:
       - name: Create Release ZIP
         run: |
           mkdir release
-          pwd
-          ls
+          pwd && ls
+          cd dist && ls && cd ..
           # Adjust the path if your .exe is located elsewhere.
           cp dist/collections_app/collections_app.exe release/
           # Copy an additional file from the repository (e.g., README.md).
