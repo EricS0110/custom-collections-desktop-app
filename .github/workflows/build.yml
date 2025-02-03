@@ -26,41 +26,45 @@ jobs:
         with:
           python-version: '3.x'
 
-      # Step 2.5: Set up tkinter (Windows includes Tkinter by default with Python installation)
-
       # Step 3: Install Poetry
       - name: Install Poetry
+        shell: pwsh
         run: |
+          # Download and install Poetry
           (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-          # Add Poetry's bin directory to the PATH for subsequent steps
-          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+          # On Windows, add Poetry’s bin directory to the PATH
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.poetry\bin"
           poetry --version
 
       # Step 4: Install Project Dependencies using Poetry
       - name: Install Dependencies
+        shell: pwsh
         run: |
           poetry lock
           poetry install
 
       # Step 5: Build the executable using PyInstaller via Poetry
       - name: Build Executable
+        shell: pwsh
         run: |
-          # This runs PyInstaller within the Poetry-managed environment.
           poetry run pyinstaller src/app.spec
 
       # Step 6: Package the .exe and additional file into a ZIP archive
       - name: Create Release ZIP
+        shell: pwsh
         run: |
-          mkdir release
-          pwd && ls
-          cd dist/collections_app && ls
-          # Adjust the path if your .exe is located elsewhere.
-          cp dist/collections_app/collections_app/collections_app.exe release/
-          # Copy an additional file from the repository (e.g., README.md).
-          cp src/settings.EXAMPLE.conf release/
-          cp ExampleBulkUpload.xlsx release/
-          # Create a ZIP archive containing the contents of the release folder.
-          cd release && tar -a -c -f ../release.zip . && cd ..
+          # Create the release directory (or ensure it exists)
+          New-Item -ItemType Directory -Force release
+
+          # Copy the executable from dist into the release folder
+          Copy-Item -Path "dist/collections_app/collections_app/collections_app.exe" -Destination "release" -Force
+
+          # Copy additional files (adjust paths if necessary)
+          Copy-Item -Path "src/settings.EXAMPLE.conf" -Destination "release" -Force
+          Copy-Item -Path "ExampleBulkUpload.xlsx" -Destination "release" -Force
+
+          # Create a ZIP archive from the contents of the release folder
+          Compress-Archive -Path "release/*" -DestinationPath "release.zip" -Force
 
       # Step 7: Upload the ZIP file as an artifact
       - name: Upload Release Artifact
