@@ -1,6 +1,5 @@
 build/ export-ignore
 docs/ export-ignore
-src/ export-ignore
 .gitattributes export-ignore
 .github/ export-ignore
 .gitignore export-ignore
