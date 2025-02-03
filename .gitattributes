@@ -1,0 +1,11 @@
+build/ export-ignore
+docs/ export-ignore
+src/ export-ignore
+.gitignore export-ignore
+.pre-commit-config.yaml export-ignore
+CODEOWNERS export-ignore
+LICENSE export-ignore
+mkdocs.yml export-ignore
+poetry.lock export-ignore
+pyproject.toml export-ignore
+README.md export-ignore
