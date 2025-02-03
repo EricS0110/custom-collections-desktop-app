@@ -37,6 +37,7 @@ jobs:
       # Step 4: Install Project Dependencies using Poetry
       - name: Install Dependencies
         run: |
+          poetry lock
           poetry install
 
       # Step 5: Build the executable using PyInstaller via Poetry
