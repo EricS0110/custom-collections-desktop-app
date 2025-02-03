@@ -9,8 +9,8 @@ import customtkinter
 import pandas as pd
 from customtkinter import CTkFont
 
-from src.logging_config import setup_logging
-from src.security import load_settings
+from logging_config import setup_logging
+from security import load_settings
 
 APP_TITLE = "Collection Manager"
 APP_GEOMETRY = "900x900"
@@ -121,6 +121,7 @@ class NewCollectionFrame(customtkinter.CTkFrame):
                 return
             try:
                 settings.mongo_connection.add_collection(collection_name)
+                notify_user_info(f"Collection created: {collection_name}")
                 logging.info(f"NEW COLLECTION CREATED: {collection_name}")
             except Exception as e:
                 notify_user_error(f"Error creating collection: {e}\n\nIt may already exist.")
