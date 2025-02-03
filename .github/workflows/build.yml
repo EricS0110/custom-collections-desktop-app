@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x-tk'
+          python-version: '3.x'
 
       # Step 3: Install Poetry
       - name: Install Poetry
