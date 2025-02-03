@@ -1,3 +1,4 @@
+
 name: Build and Package Release
 
 on:
@@ -13,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       # Step 1: Checkout the repository
@@ -24,67 +25,45 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.x'
+
+      # Step 2.5: Set up tkinter
+      - name: Install Tkinter dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
 
       # Step 3: Install Poetry
       - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          virtualenvs-path: .venv
-          installer-parallel: true
-      
-      #----------------------------------------------
-      #       load cached venv if cache exists
-      #----------------------------------------------
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-      #----------------------------------------------
-      # install dependencies if cache does not exist
-      #----------------------------------------------
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-      #----------------------------------------------
-      # install your root project, if required
-      #----------------------------------------------
-      - name: Install project
-        run: poetry install --no-interaction
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          # Add Poetry's bin directory to the PATH for subsequent steps
+          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+          poetry --version
 
       # Step 4: Install Project Dependencies using Poetry
       - name: Install Dependencies
-        shell: pwsh
         run: |
           poetry lock
           poetry install
 
       # Step 5: Build the executable using PyInstaller via Poetry
       - name: Build Executable
-        shell: pwsh
         run: |
+          # This runs PyInstaller within the Poetry-managed environment.
           poetry run pyinstaller src/app.spec
 
       # Step 6: Package the .exe and additional file into a ZIP archive
       - name: Create Release ZIP
-        shell: pwsh
         run: |
-          # Create the release directory (or ensure it exists)
-          New-Item -ItemType Directory -Force release
-
-          # Copy the executable from dist into the release folder
-          Copy-Item -Path "dist/collections_app/collections_app/collections_app.exe" -Destination "release" -Force
-
-          # Copy additional files (adjust paths if necessary)
-          Copy-Item -Path "src/settings.EXAMPLE.conf" -Destination "release" -Force
-          Copy-Item -Path "ExampleBulkUpload.xlsx" -Destination "release" -Force
-
-          # Create a ZIP archive from the contents of the release folder
-          Compress-Archive -Path "release/*" -DestinationPath "release.zip" -Force
+          mkdir release
+          # Adjust the path if your .exe is located elsewhere.
+          cp dist/collections_app/collections_app release/
+          # Copy an additional file from the repository (e.g., README.md).
+          cp src/settings.EXAMPLE.conf release/
+          cp ExampleBulkUpload.xlsx release/
+          # Create a ZIP archive containing the contents of the release folder.
+          cd release && zip -r ../release.zip . && cd ..
 
       # Step 7: Upload the ZIP file as an artifact
       - name: Upload Release Artifact
