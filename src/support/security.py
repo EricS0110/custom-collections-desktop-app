@@ -1,17 +1,19 @@
 import os
 import sys
 import tkinter as tk
+from pathlib import Path
 from tkinter import messagebox
 from typing import Any, Optional
 
 from dotenv import load_dotenv
-from mongo import MongoConnection
 from pydantic import SecretStr, computed_field
 from pydantic_settings import BaseSettings
 
+from . import mongo_conn as mc
+
 
 class Settings(BaseSettings):
-    mongo_connection: Optional[MongoConnection] = None
+    mongo_connection: Optional[mc.MongoConnection] = None
     mongo_username: str
     mongo_password: SecretStr
     mongo_cluster: str
@@ -49,11 +51,8 @@ class Settings(BaseSettings):
 
 def load_settings() -> Settings:
     # Load the settings from the environment
-    # Determines the current directory based on execution method (.py or .exe)
-    if getattr(sys, "frozen", False):
-        current_directory = os.path.dirname(sys.executable)  # For .exe
-    else:
-        current_directory = os.path.dirname(os.path.abspath(__file__))  # For .py
+    current_directory = Path(os.path.dirname(os.path.abspath(__file__))).parent
+    print(current_directory)
 
     settings_file = os.path.join(current_directory, "settings.conf")
 
@@ -77,7 +76,7 @@ def load_settings() -> Settings:
 
     # Attempt to connect to the MongoDB instance specified in the connection string
     try:
-        return_settings.mongo_connection = MongoConnection(return_settings.model_dump())
+        return_settings.mongo_connection = mc.MongoConnection(return_settings.model_dump())
     except Exception:
         root = tk.Tk()
         root.withdraw()
