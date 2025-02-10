@@ -1,3 +1,6 @@
-# Getting Started with Python 3.12
+# Getting Set Up with Python
 
-This is where Python 3.12 setup details are kept for local execution of the code
+This section will walk you through setting up a Python environment from scratch.  If you already have Python 
+installed and a virtual environment set up that this application can use, you can skip this section!
+
+## Set Up Python Using `setup.bat`
