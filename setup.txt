@@ -4,17 +4,17 @@ setlocal EnableDelayedExpansion
 REM ============================================================
 REM 1. Define desired Python version and related variables
 REM ============================================================
-set "PYTHON_VERSION=3.12"
-set "PYTHON_INSTALLER=python-%PYTHON_VERSION%.0-amd64.exe"
+set "PYTHON_VERSION=3.13"
+set "PYTHON_INSTALLER=python-%PYTHON_VERSION%.2-amd64.exe"
 set "PYTHON_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%.0/%PYTHON_INSTALLER%"
 REM (Optional) set a folder to install Python if you want to customize it:
 REM set "PYTHON_INSTALL_DIR=C:\MyCustomPythonDir"
 
-REM Flag to indicate if Python 3.12 was found.
+REM Flag to indicate if Python 3.13 was found.
 set "PYTHON_FOUND=false"
 
 REM ============================================================
-REM 2. Search for Python 3.12 on the PATH
+REM 2. Search for Python 3.13 on the PATH
 REM ============================================================
 for /f "delims=" %%i in ('where python 2^>nul') do (
     for /f "usebackq tokens=1,2 delims= " %%A in (`"%%i" --version 2^>^&1`) do (
@@ -31,7 +31,7 @@ for /f "delims=" %%i in ('where python 2^>nul') do (
 )
 
 REM ============================================================
-REM 3. If Python 3.12 is not found, download and install it.
+REM 3. If Python 3.13 is not found, download and install it.
 REM ============================================================
 if "!PYTHON_FOUND!"=="true" (
     echo Python %PYTHON_VERSION% is already installed at: !PYTHON_PATH!
@@ -72,7 +72,7 @@ if "!PYTHON_FOUND!"=="true" (
 )
 
 REM ============================================================
-REM 4. Set up a virtual environment using Python 3.12
+REM 4. Set up a virtual environment using Python 3.13
 REM ============================================================
 echo.
 echo Creating virtual environment using Python %PYTHON_VERSION%...
