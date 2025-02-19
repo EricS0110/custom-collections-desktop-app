@@ -16,3 +16,9 @@ for the latest version of the 3.13 version of Python.
 ![Python Download Page](images/PythonSetup/PythonSetup001.png)
 2. Once the installer file finishes downloading, you'll want to run it.  You can do this by double-clicking the file in
 your downloads folder, or by clicking the file in your browser if it's still in your downloads bar.
+3. When you start the installation process, you should see a window similar to the one below.  The **most** important
+part of this installation process is to make sure you've got the `Add python.exe to PATH` selected.  This will make
+sure that Windows recognizes your installation of Python as the default.  Once you've double-checked that this box is 
+selected, you're good to click on the `Install Now` option.  If you're an advanced user and want to go your own way,
+you can click on `Customize installation`, but these instructions assume you just want the default installation.
+![Python Installation Start](images/PythonSetup/PythonSetup002.png)
