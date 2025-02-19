@@ -1,0 +1,114 @@
+@echo off
+setlocal EnableDelayedExpansion
+
+REM ============================================================
+REM 1. Define desired Python version and related variables
+REM ============================================================
+set "PYTHON_VERSION=3.12"
+set "PYTHON_INSTALLER=python-%PYTHON_VERSION%.0-amd64.exe"
+set "PYTHON_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%.0/%PYTHON_INSTALLER%"
+REM (Optional) set a folder to install Python if you want to customize it:
+REM set "PYTHON_INSTALL_DIR=C:\MyCustomPythonDir"
+
+REM Flag to indicate if Python 3.12 was found.
+set "PYTHON_FOUND=false"
+
+REM ============================================================
+REM 2. Search for Python 3.12 on the PATH
+REM ============================================================
+for /f "delims=" %%i in ('where python 2^>nul') do (
+    for /f "usebackq tokens=1,2 delims= " %%A in (`"%%i" --version 2^>^&1`) do (
+        if "%%A"=="Python" (
+            echo Detected Python version: %%B
+            set "ver=%%B"
+            REM Check if the version string (first 4 chars) matches our target.
+            if "!ver:~0,4!"=="%PYTHON_VERSION%" (
+                set "PYTHON_FOUND=true"
+                set "PYTHON_PATH=%%i"
+            )
+        )
+    )
+)
+
+REM ============================================================
+REM 3. If Python 3.12 is not found, download and install it.
+REM ============================================================
+if "!PYTHON_FOUND!"=="true" (
+    echo Python %PYTHON_VERSION% is already installed at: !PYTHON_PATH!
+) else (
+    echo Python %PYTHON_VERSION% is not installed.
+
+    REM Define local variable for the installer location (in the same folder as the batch file)
+    set "INSTALLER=%~dp0%PYTHON_INSTALLER%"
+
+    REM Download the installer if it doesn’t already exist
+    if not exist "%INSTALLER%" (
+        echo Downloading Python installer from %PYTHON_URL%...
+        certutil -urlcache -split -f "%PYTHON_URL%" "%INSTALLER%"
+        if errorlevel 1 (
+            echo ERROR: Failed to download the installer.
+            pause
+            exit /b 1
+        )
+    ) else (
+        echo Installer already exists at "%INSTALLER%".
+    )
+
+    REM Install Python silently.
+    REM (For custom install location, add InstallDir="%PYTHON_INSTALL_DIR%" to the options.)
+    echo Installing Python silently...
+    "%INSTALLER%" /quiet InstallAllUsers=1 PrependPath=1
+    if errorlevel 1 (
+        echo ERROR: Python installation did not complete successfully.
+        pause
+        exit /b 1
+    ) else (
+        echo Python installation initiated. It may take a moment to complete.
+    )
+
+    REM After installation, we assume that Python is now on the PATH.
+    REM You could re-run the detection here. For simplicity, we use the 'python' command.
+    set "PYTHON_PATH=python"
+)
+
+REM ============================================================
+REM 4. Set up a virtual environment using Python 3.12
+REM ============================================================
+echo.
+echo Creating virtual environment using Python %PYTHON_VERSION%...
+REM Use the found path if available; otherwise, fallback to "python"
+if defined PYTHON_PATH (
+    "!PYTHON_PATH!" -m venv venv
+) else (
+    python -m venv venv
+)
+
+if errorlevel 1 (
+    echo ERROR: Failed to create virtual environment.
+    pause
+    exit /b 1
+)
+
+REM ============================================================
+REM 5. Activate the virtual environment and install requirements
+REM ============================================================
+echo.
+echo Activating virtual environment...
+call venv\Scripts\activate
+
+REM Upgrade pip in the virtual environment
+echo Upgrading pip...
+python -m pip install --upgrade pip
+
+REM Check if requirements.txt exists and install packages
+if exist requirements.txt (
+    echo Installing requirements from requirements.txt...
+    python -m pip install -r requirements.txt
+) else (
+    echo No requirements.txt file found.
+)
+
+echo.
+echo Virtual environment setup complete.
+call deactivate
+pause
