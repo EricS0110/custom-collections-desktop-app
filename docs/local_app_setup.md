@@ -101,12 +101,15 @@ mongo_uri = ""
 ```
 
 Fill in the values you recorded from the MongoDB setup steps into the `settings.conf` file.  For example, if I were to
-fill in the values I recorded from the MongoDB setup steps, my `settings.conf` file would look like the following:
+fill in the values I recorded from the MongoDB setup steps, my `settings.conf` file would look like the following.
+**Please note that the `mongo_cluster` value has a lower-case leading character.  This is done by default in a
+connection string for MongoDB.  You can confirm the formatting for yourself by checking the value before the underlined
+portion in the connection string screenshot in the prior section.
 ```conf
 [mongo_db]
 mongo_username = "DesktopAppUser"
 mongo_password = "YourPasswordHere"
-mongo_cluster = "Cluster0"
+mongo_cluster = "cluster0"
 mongo_database = "ExampleDatabase"
 mongo_uri = "lchdm"
 ```
@@ -118,8 +121,59 @@ the internet, I've got to walk you through how to set up a launcher file and sho
 not that hard, but it's a bit more involved than just double-clicking the `main.py` file.
 
 Open up Windows File Explorer and navigate to the folder where you saved the application.  In the `src` folder, you'll
-want to right click and create a new text file
+want to right-click and create a new text file and name it whatever you'd like.  I named mine `launch_application.txt`
+to keep it easy to know what it does.
+![Local Launcher file creation pt. 1](images/ApplicationSetup/AppSetup014.png)
+![Local launcher file creation pt. 2](images/ApplicationSetup/AppSetup015.png)
 
-## Summary of steps
-1. copy & renaming settings.EXAMPLE.conf
-2. Setting up the local launcher file and shortcut
+Open up your new text file in an editor of your choice, copy and paste the code below into the new file, save,
+and close the file.  **If you do not use a virtual environment, you can delete the calls to `venv\Scripts\activate`
+and `deactivate` as these are virtual environment-specific commands.
+
+```batch
+@echo off
+setlocal
+
+REM Activate the virtual environment
+call venv\Scripts\activate
+
+REM Run the Python application
+python src\collections_app.py
+
+REM Capture the exit code of the Python application
+set "EXIT_CODE=%ERRORLEVEL%"
+
+REM Deactivate the virtual environment
+call deactivate
+
+REM Display the exit code
+echo Python application exited with code %EXIT_CODE%.
+
+REM Prompt the user to press Enter to continue
+pause
+
+endlocal
+```
+
+Once you've got the code above in the new file, right-click on the file in Windows File Explorer again and rename the
+file extension (the part after the `.`) to be `.bat`.  You're probably going to get a pop-up warning you that the file 
+may become unreadable if you change the file extension but we want to be able to run the file, and you can't run
+a text file.You should now see something like this in that the main application folder:
+![Application Folder](images/ApplicationSetup/AppSetup016.png)
+
+To create something you can run from a double-click-able shortcut on the Desktop, right-click on the `.bat` file.  If 
+you see a list of options like the one below, click on the `Show more options` option.
+![Show More Options](images/ApplicationSetup/AppSetup017.png)
+
+From this option menu, hover over the `Send to` option and select the `Desktop (create shortcut)` option.  This will 
+create a shortcut on the Desktop that you can double-click to run the newly-created `.bat` file, which in turn will 
+launch the Python application!  You can change the name of the Desktop shortcut to whatever you want, it doesn't impact
+what file the shortcut calls.  I renamed mine to be a nice and simple `Collections App`
+![Send To Options](images/ApplicationSetup/AppSetup018.png)
+![Desktop Link](images/ApplicationSetup/AppSetup019.png)
+
+Go ahead and double click this new shortcut.  If you set up your `settings.conf` file with valid connection details, 
+you should see the main application page.  If you haven't set up the `settings.conf` file, the application will return 
+an error telling you that you've got to set up settings first.  If you've set up the `settings.conf` file but entered 
+one of the values wrong, the application will fail to connect and notify you of that.  Otherwise, your app will launch
+and you're good to start exploring!
