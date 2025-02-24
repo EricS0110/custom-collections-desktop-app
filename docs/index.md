@@ -7,10 +7,10 @@ completed.
 
 ## Contents
 
-* __Home__ - You are here!
+* __Overview__ - A brief overview of the application.
 * __MongoDB__ - How to set up a MongoDB account, database, and collections from scratch.
 * __Python__ - Getting Python 3.12 set up on your local machine.
-* __App Setup__ - Setting up the application for use.
+* __Local Setup__ - Setting up the application for use.
 * __App Usage__ - How to finally start using the application.
 
 ----

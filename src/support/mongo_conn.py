@@ -99,7 +99,7 @@ class MongoConnection:
                 # Check if the collection exists
                 if collection_name not in self.db.list_collection_names():
                     # Create the collection if it does not exist
-                    self.db.create_collection(collection_name)
+                    self.db.create_collection(collection_name.lower())
 
                 # Convert DataFrame to list of dictionaries
                 data = df.to_dict(orient="records")
